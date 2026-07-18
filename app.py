@@ -1,8 +1,8 @@
 import streamlit as st
 
-# -----------------------------
+# ----------------------------
 # Page Configuration
-# -----------------------------
+# ----------------------------
 st.set_page_config(
     page_title="Enterprise AI Platform",
     page_icon="🤖",
@@ -10,60 +10,45 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# -----------------------------
-# Main Dashboard
-# -----------------------------
+# ----------------------------
+# Header
+# ----------------------------
 st.title("🤖 Enterprise AI Platform")
+st.caption("AI-Powered Business Intelligence Dashboard")
 
-st.markdown("""
-### Welcome!
+st.divider()
 
-This platform integrates multiple Artificial Intelligence and Machine Learning
-modules into a single enterprise dashboard.
+# ----------------------------
+# Welcome
+# ----------------------------
+st.success("Welcome! Select a module from the sidebar to begin.")
 
-Use the **sidebar** to navigate between different modules.
-""")
-
-# -----------------------------
-# Project Overview
-# -----------------------------
-st.subheader("📌 Project Overview")
-
-st.write("""
-The Enterprise AI Platform combines customer analytics, natural language
-processing, forecasting, and reporting into one unified application.
-
-The platform is designed to demonstrate multiple AI techniques working together
-through a single interactive dashboard.
-""")
-
-# -----------------------------
-# Available Modules
-# -----------------------------
-st.subheader("📂 Available Modules")
-
-col1, col2 = st.columns(2)
+# ----------------------------
+# Quick Summary
+# ----------------------------
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.info("📊 Customer Analytics")
-    st.info("💬 NLP & Sentiment")
+    st.metric("Datasets", "2")
 
 with col2:
-    st.info("📈 Forecasting")
-    st.info("📑 Reports")
+    st.metric("Modules", "5")
 
-# -----------------------------
-# Dataset Information
-# -----------------------------
-st.subheader("📁 Datasets")
+with col3:
+    st.metric("Status", "Ready")
+
+st.divider()
 
 st.markdown("""
-- **online_retail.csv** — Customer analytics, segmentation, forecasting
-- **amazon.csv** — NLP and sentiment analysis
+### 🚀 Project Modules
+
+- 📊 Customer Analytics
+- 💬 NLP & Sentiment Analysis
+- 📈 Forecasting
+- 📑 Reports
+- ℹ️ About
+
+Use the sidebar to explore each module.
 """)
 
-# -----------------------------
-# Footer
-# -----------------------------
-st.markdown("---")
-st.caption("Enterprise AI Platform | AI/ML Team Project")
+st.info("Machine Learning models will appear inside their respective pages after integration.")
