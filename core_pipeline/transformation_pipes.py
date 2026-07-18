@@ -1,58 +1,63 @@
 import pandas as pd
+
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
+
 class DataTransformationPipeline:
     """
-    Handles preprocessing for the Online Retail dataset.
+    Data preprocessing and feature engineering
+    for the Online Retail dataset.
     """
 
     def preprocess_data(self, df):
         """
-        Clean the Online Retail dataset before feature engineering.
+        Clean the dataset before feature engineering.
         """
 
-        # Create a copy so the original data is not modified
         df = df.copy()
 
-        # Remove rows without a Customer ID
+        # Remove rows with missing CustomerID
         df = df.dropna(subset=["CustomerID"])
 
-        # Remove cancelled invoices (InvoiceNo starting with 'C')
-        df = df[~df["InvoiceNo"].astype(str).str.startswith("C")]
+        # Remove cancelled invoices
+        df = df[
+            ~df["InvoiceNo"].astype(str).str.startswith("C")
+        ]
 
-        # Remove invalid quantities
+        # Remove invalid Quantity
         df = df[df["Quantity"] > 0]
 
-        # Remove invalid prices
+        # Remove invalid UnitPrice
         df = df[df["UnitPrice"] > 0]
 
-        # Convert InvoiceDate into datetime format
+        # Convert InvoiceDate to datetime
         df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
 
         return df
 
-
     def create_lag_features(self, df):
         """
-        Creates lag features based on previous customer purchases.
+        Create lag features using previous customer purchases.
         """
 
         df = df.copy()
 
-        # Sort data by CustomerID and InvoiceDate
-        df = df.sort_values(["CustomerID", "InvoiceDate"])
+        # Sort transactions
+        df = df.sort_values(
+            ["CustomerID", "InvoiceDate"]
+        )
 
-        # Previous purchase quantity
+        # Previous Quantity
         df["PreviousQuantity"] = (
             df.groupby("CustomerID")["Quantity"]
             .shift(1)
             .fillna(0)
         )
 
-        # Previous purchase price
+        # Previous Unit Price
         df["PreviousUnitPrice"] = (
             df.groupby("CustomerID")["UnitPrice"]
             .shift(1)
@@ -60,9 +65,11 @@ class DataTransformationPipeline:
         )
 
         return df
-        def build_preprocessor(self):
+
+    def build_preprocessor(self):
         """
-        Build preprocessing pipeline.
+        Create preprocessing pipeline for numerical
+        and categorical features.
         """
 
         numeric_features = [
