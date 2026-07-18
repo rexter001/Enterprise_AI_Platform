@@ -664,7 +664,7 @@ def main():
 
     print("Graphs saved in outputs/graphs")
 
-    print("Models saved in models/")
+    print("Models saved in serialized_weights/")
 
     print("Metrics saved in outputs/metrics")
 
