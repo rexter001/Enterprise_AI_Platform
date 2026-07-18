@@ -11,3 +11,6 @@ joblib
 imbalanced-learn
 category_encoders
 umap-learn
+gensim
+spacy
+scipy
