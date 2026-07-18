@@ -8,3 +8,6 @@ tensorflow
 nltk
 wordcloud
 joblib
+gensim
+spacy
+scipy

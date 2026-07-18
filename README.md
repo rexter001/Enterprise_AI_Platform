@@ -26,8 +26,13 @@ The platform combines multiple AI modules into a single dashboard for customer a
 - Scikit-learn
 - TensorFlow
 - NLTK
+- spaCy
+- Gensim
+- WordCloud
+- joblib
 - Matplotlib
 - Plotly
+- scipy
 
 ---
 
@@ -63,8 +68,7 @@ Enterprise_AI_Platform/
 ## 📊 Datasets
 
 - Online Retail Dataset
-- Amazon Reviews Dataset
-
+- Amazon Product Reviews Dataset (used for NLP preprocessing, sentiment analysis, and text mining)
 ---
 
 ## ⚙️ Installation
