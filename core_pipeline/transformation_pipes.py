@@ -1,144 +1,304 @@
+"""
+core_pipeline/transformation_pipes.py
+--------------------------------------
+Member 4 - Sub-Module E: Scalable Data Transformation Pipes (Feature Engineering)
+
+What this file does (plain English):
+1. Loads the retail transactions data.
+2. Builds customer-level features: lag features (time between orders),
+   target encoding (avg spend per category), and handles class imbalance
+   with SMOTE + class weights.
+3. Wraps everything into a single sklearn Pipeline + ColumnTransformer so
+   preprocessing is reproducible and reusable by the dashboard (app.py).
+4. Compares model performance BEFORE vs AFTER these transformations,
+   and saves a comparison chart for the report.
+
+Expected input columns (standard "Online Retail" dataset):
+    InvoiceNo, StockCode, Description, Quantity, InvoiceDate,
+    UnitPrice, CustomerID, Country
+
+If your actual CSV uses different column names, just edit the
+COLUMN MAPPING section below — everything else stays the same.
+"""
+
+import os
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score, classification_report
+from sklearn.utils.class_weight import compute_class_weight
+
+try:
+    from imblearn.over_sampling import SMOTE
+    IMBLEARN_AVAILABLE = True
+except ImportError:
+    IMBLEARN_AVAILABLE = False
+    print("[WARN] imbalanced-learn not installed. Run: pip install imbalanced-learn")
 
 
-class DataTransformationPipeline:
+# ----------------------------------------------------------------------
+# 0. COLUMN MAPPING  -- edit this if your CSV headers differ
+# ----------------------------------------------------------------------
+COL = {
+    "invoice": "InvoiceNo",
+    "stock_code": "StockCode",
+    "description": "Description",
+    "quantity": "Quantity",
+    "invoice_date": "InvoiceDate",
+    "unit_price": "UnitPrice",
+    "customer_id": "CustomerID",
+    "country": "Country",
+}
+
+
+# ----------------------------------------------------------------------
+# 1. LOAD DATA
+# ----------------------------------------------------------------------
+def load_data(path="datasets/retail_transactions.csv"):
+    """Load raw transactions and do minimal cleaning."""
+    df = pd.read_csv(path, encoding="ISO-8859-1")
+
+    # Basic cleaning: drop rows with no customer id, negative/zero quantity or price
+    df = df.dropna(subset=[COL["customer_id"]])
+    df = df[df[COL["quantity"]] > 0]
+    df = df[df[COL["unit_price"]] > 0]
+
+    df[COL["invoice_date"]] = pd.to_datetime(df[COL["invoice_date"]], errors="coerce")
+    df = df.dropna(subset=[COL["invoice_date"]])
+
+    df["TotalPrice"] = df[COL["quantity"]] * df[COL["unit_price"]]
+    return df
+
+
+# ----------------------------------------------------------------------
+# 2. LAG FEATURES  -- "how long since this customer's last order?"
+# ----------------------------------------------------------------------
+def add_lag_features(df):
     """
-    Data preprocessing and feature engineering
-    for the Online Retail dataset.
+    For each customer, sort their orders by date and compute:
+      - days_since_last_order   (lag feature: gap between consecutive orders)
+      - order_seq_num           (1st order, 2nd order, ...)
+      - avg_gap_days_so_far     (rolling average gap = a smoothed lag feature)
     """
+    df = df.sort_values([COL["customer_id"], COL["invoice_date"]]).copy()
 
-    def preprocess_data(self, df):
-        """
-        Clean the dataset before feature engineering.
-        """
+    df["days_since_last_order"] = (
+        df.groupby(COL["customer_id"])[COL["invoice_date"]]
+        .diff()
+        .dt.days
+    )
+    df["days_since_last_order"] = df["days_since_last_order"].fillna(0)
 
-        df = df.copy()
+    df["order_seq_num"] = df.groupby(COL["customer_id"]).cumcount() + 1
 
-        # Remove rows with missing CustomerID
-        df = df.dropna(subset=["CustomerID"])
+    df["avg_gap_days_so_far"] = (
+        df.groupby(COL["customer_id"])["days_since_last_order"]
+        .expanding()
+        .mean()
+        .reset_index(level=0, drop=True)
+    )
 
-        # Remove cancelled invoices
-        df = df[
-            ~df["InvoiceNo"].astype(str).str.startswith("C")
-        ]
+    # Weekday vs weekend ratio signal (useful behavioural feature)
+    df["is_weekend"] = df[COL["invoice_date"]].dt.weekday >= 5
 
-        # Remove invalid Quantity
-        df = df[df["Quantity"] > 0]
+    return df
 
-        # Remove invalid UnitPrice
-        df = df[df["UnitPrice"] > 0]
 
-        # Convert InvoiceDate to datetime
-        df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
+# ----------------------------------------------------------------------
+# 3. TARGET ENCODING  -- "avg spend for this product category / country"
+# ----------------------------------------------------------------------
+def target_encode(df, group_col, target_col="TotalPrice", smoothing=10):
+    """
+    Smoothed mean target encoding.
+    Instead of one-hot encoding a high-cardinality column (like Country or
+    StockCode), we replace each category with a smoothed average of the
+    target value for that category. Smoothing pulls rare categories toward
+    the global mean so they don't overfit.
+    """
+    global_mean = df[target_col].mean()
 
-        return df
+    agg = df.groupby(group_col)[target_col].agg(["mean", "count"])
+    smoothed = (agg["mean"] * agg["count"] + global_mean * smoothing) / (
+        agg["count"] + smoothing
+    )
 
-    def create_lag_features(self, df):
-        """
-        Create lag features using previous customer purchases.
-        """
+    encoded_col = f"{group_col}_target_enc"
+    df[encoded_col] = df[group_col].map(smoothed)
+    df[encoded_col] = df[encoded_col].fillna(global_mean)
+    return df, encoded_col
 
-        df = df.copy()
 
-        # Sort transactions
-        df = df.sort_values(
-            ["CustomerID", "InvoiceDate"]
-        )
+# ----------------------------------------------------------------------
+# 4. BUILD A CUSTOMER-LEVEL FEATURE TABLE
+#    (this is what feeds clustering AND classification)
+# ----------------------------------------------------------------------
+def build_customer_features(df):
+    df = add_lag_features(df)
+    df, country_enc_col = target_encode(df, COL["country"])
 
-        # Previous Quantity
-        df["PreviousQuantity"] = (
-            df.groupby("CustomerID")["Quantity"]
-            .shift(1)
-            .fillna(0)
-        )
+    customer_features = df.groupby(COL["customer_id"]).agg(
+        total_spend=("TotalPrice", "sum"),
+        avg_order_value=("TotalPrice", "mean"),
+        num_orders=(COL["invoice"], "nunique"),
+        avg_gap_days=("avg_gap_days_so_far", "last"),
+        weekend_order_ratio=("is_weekend", "mean"),
+        country_target_enc=(country_enc_col, "mean"),
+    ).reset_index()
 
-        # Previous Unit Price
-        df["PreviousUnitPrice"] = (
-            df.groupby("CustomerID")["UnitPrice"]
-            .shift(1)
-            .fillna(0)
-        )
+    # Simple binary target for demo classification: "high value customer"
+    # (top 25% spenders = 1, rest = 0) — used only to demo SMOTE/class weights
+    threshold = customer_features["total_spend"].quantile(0.75)
+    customer_features["high_value"] = (
+        customer_features["total_spend"] >= threshold
+    ).astype(int)
 
-        return df
+    return customer_features
 
-    def build_preprocessor(self):
-        """
-        Create preprocessing pipeline for numerical
-        and categorical features.
-        """
 
-        numeric_features = [
-            "Quantity",
-            "UnitPrice",
-            "PreviousQuantity",
-            "PreviousUnitPrice"
-        ]
+# ----------------------------------------------------------------------
+# 5. COLUMNTRANSFORMER + PIPELINE
+# ----------------------------------------------------------------------
+def build_preprocessing_pipeline(numeric_features, categorical_features):
+    """
+    One unified preprocessing block:
+      - numeric: impute missing -> scale
+      - categorical: impute missing -> one-hot encode
+    Combined via ColumnTransformer so it can be dropped straight into
+    any sklearn Pipeline (and reused identically at inference time).
+    """
+    numeric_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
 
-        categorical_features = [
-            "Country"
-        ]
+    categorical_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ])
 
-        numeric_pipeline = Pipeline(
-            steps=[
-                ("imputer", SimpleImputer(strategy="median")),
-                ("scaler", StandardScaler())
-            ]
-        )
+    preprocessor = ColumnTransformer(transformers=[
+        ("num", numeric_transformer, numeric_features),
+        ("cat", categorical_transformer, categorical_features),
+    ])
 
-        categorical_pipeline = Pipeline(
-            steps=[
-                ("imputer", SimpleImputer(strategy="most_frequent")),
-                ("encoder", OneHotEncoder(handle_unknown="ignore"))
-            ]
-        )
+    return preprocessor
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("num", numeric_pipeline, numeric_features),
-                ("cat", categorical_pipeline, categorical_features)
-            ]
-        )
 
-        return preprocessor
-    
-        
-    def create_high_value_customer(self, df):
-        """
-        Create a High_Value_Customer label based on total spending.
-        """
+# ----------------------------------------------------------------------
+# 6. HANDLE CLASS IMBALANCE: SMOTE + class weights
+# ----------------------------------------------------------------------
+def apply_smote(X_train, y_train):
+    if not IMBLEARN_AVAILABLE:
+        print("[SKIP] SMOTE skipped — imbalanced-learn not installed.")
+        return X_train, y_train
+    smote = SMOTE(random_state=42)
+    X_res, y_res = smote.fit_resample(X_train, y_train)
+    return X_res, y_res
 
-        df = df.copy()
 
-        # Calculate transaction spend
-        df["TotalSpend"] = df["Quantity"] * df["UnitPrice"]
+def get_class_weights(y_train):
+    classes = np.unique(y_train)
+    weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
+    return dict(zip(classes, weights))
 
-        # Calculate total spend per customer
-        customer_spend = (
-            df.groupby("CustomerID")["TotalSpend"]
-            .sum()
-            .reset_index()
-        )
 
-        # Median threshold
-        threshold = customer_spend["TotalSpend"].median()
+# ----------------------------------------------------------------------
+# 7. BEFORE vs AFTER COMPARISON
+# ----------------------------------------------------------------------
+def compare_before_after(customer_features, numeric_features, categorical_features,
+                          target="high_value", save_path="analytical_reports"):
+    os.makedirs(save_path, exist_ok=True)
 
-        # High value label
-        customer_spend["High_Value_Customer"] = (
-            customer_spend["TotalSpend"] >= threshold
-        ).astype(int)
+    X = customer_features[numeric_features + categorical_features]
+    y = customer_features[target]
 
-        # Merge back
-        df = df.merge(
-            customer_spend[
-                ["CustomerID", "High_Value_Customer"]
-            ],
-            on="CustomerID",
-            how="left"
-        )
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-        return df
+    preprocessor = build_preprocessing_pipeline(numeric_features, categorical_features)
+
+    # ---- BEFORE: raw features, no scaling/encoding pipeline, no SMOTE ----
+    X_train_raw = pd.get_dummies(X_train, columns=categorical_features).fillna(0)
+    X_test_raw = pd.get_dummies(X_test, columns=categorical_features).fillna(0)
+    X_test_raw = X_test_raw.reindex(columns=X_train_raw.columns, fill_value=0)
+
+    model_before = RandomForestClassifier(random_state=42)
+    model_before.fit(X_train_raw, y_train)
+    preds_before = model_before.predict(X_test_raw)
+    acc_before = accuracy_score(y_test, preds_before)
+    f1_before = f1_score(y_test, preds_before)
+
+    # ---- AFTER: full Pipeline (ColumnTransformer) + SMOTE + class weights ----
+    X_train_processed = preprocessor.fit_transform(X_train)
+    X_test_processed = preprocessor.transform(X_test)
+
+    X_train_bal, y_train_bal = apply_smote(X_train_processed, y_train)
+    weights = get_class_weights(y_train_bal)
+
+    full_pipeline = Pipeline(steps=[
+        ("classifier", RandomForestClassifier(
+            random_state=42,
+            class_weight=weights if not IMBLEARN_AVAILABLE else "balanced"
+        )),
+    ])
+    full_pipeline.fit(X_train_bal, y_train_bal)
+    preds_after = full_pipeline.predict(X_test_processed)
+    acc_after = accuracy_score(y_test, preds_after)
+    f1_after = f1_score(y_test, preds_after)
+
+    print("BEFORE  -> Accuracy: {:.3f} | F1: {:.3f}".format(acc_before, f1_before))
+    print("AFTER   -> Accuracy: {:.3f} | F1: {:.3f}".format(acc_after, f1_after))
+    print("\nClassification report (AFTER):\n", classification_report(y_test, preds_after))
+
+    # ---- chart for the report/slides ----
+    fig, ax = plt.subplots(figsize=(6, 4))
+    metrics = ["Accuracy", "F1-score"]
+    before_vals = [acc_before, f1_before]
+    after_vals = [acc_after, f1_after]
+    x = np.arange(len(metrics))
+    width = 0.35
+    ax.bar(x - width/2, before_vals, width, label="Before")
+    ax.bar(x + width/2, after_vals, width, label="After")
+    ax.set_xticks(x)
+    ax.set_xticklabels(metrics)
+    ax.set_title("Model Performance: Before vs After Feature Pipeline")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(os.path.join(save_path, "before_after_comparison.png"))
+    plt.close(fig)
+
+    return {
+        "before": {"accuracy": acc_before, "f1": f1_before},
+        "after": {"accuracy": acc_after, "f1": f1_after},
+        "preprocessor": preprocessor,
+        "model": full_pipeline,
+    }
+
+
+# ----------------------------------------------------------------------
+# 8. MAIN — run standalone for testing / to feed the dashboard
+# ----------------------------------------------------------------------
+if __name__ == "__main__":
+    raw_df = load_data("datasets/online_retail.csv")
+    customer_features = build_customer_features(raw_df)
+
+    numeric_features = [
+        "total_spend", "avg_order_value", "num_orders",
+        "avg_gap_days", "weekend_order_ratio", "country_target_enc",
+    ]
+    categorical_features = []  # already target-encoded, so none needed here
+
+    customer_features.to_csv("analytical_reports/customer_features.csv", index=False)
+    print(f"Built feature table with {customer_features.shape[0]} customers "
+          f"and {customer_features.shape[1]} columns.")
+
+    results = compare_before_after(customer_features, numeric_features, categorical_features)
+    print(results["before"], results["after"])
