@@ -36,7 +36,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 DATA_PATH = "datasets/online_retail.csv"
 
-MODEL_DIR = "models"
+MODEL_DIR = "serialized_weights"
 GRAPH_DIR = "outputs/graphs"
 METRIC_DIR = "outputs/metrics"
 
