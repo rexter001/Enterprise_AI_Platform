@@ -105,3 +105,40 @@ class DataTransformationPipeline:
         )
 
         return preprocessor
+    
+        
+    def create_high_value_customer(self, df):
+        """
+        Create a High_Value_Customer label based on total spending.
+        """
+
+        df = df.copy()
+
+        # Calculate transaction spend
+        df["TotalSpend"] = df["Quantity"] * df["UnitPrice"]
+
+        # Calculate total spend per customer
+        customer_spend = (
+            df.groupby("CustomerID")["TotalSpend"]
+            .sum()
+            .reset_index()
+        )
+
+        # Median threshold
+        threshold = customer_spend["TotalSpend"].median()
+
+        # High value label
+        customer_spend["High_Value_Customer"] = (
+            customer_spend["TotalSpend"] >= threshold
+        ).astype(int)
+
+        # Merge back
+        df = df.merge(
+            customer_spend[
+                ["CustomerID", "High_Value_Customer"]
+            ],
+            on="CustomerID",
+            how="left"
+        )
+
+        return df
