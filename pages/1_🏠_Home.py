@@ -8,8 +8,8 @@ st.divider()
 st.markdown("""
 ## Welcome!
 
-The **Enterprise AI Platform** is a unified dashboard that integrates multiple
-Artificial Intelligence and Machine Learning modules into a single application.
+The **Enterprise AI Platform** integrates Customer Analytics, NLP Sentiment Analysis, 
+Time Series Forecasting and Business Reporting into one interactive dashboard for business intelligence.
 
 Navigate through the modules using the sidebar.
 """)
@@ -43,7 +43,7 @@ with c2:
     st.metric("Modules", "5")
 
 with c3:
-    st.metric("Project Status", "Development")
+    st.metric("Project Status", "Completed")
 
 st.divider()
 
@@ -65,4 +65,4 @@ with tech3:
 
 st.divider()
 
-st.info("👈 Select any module from the sidebar to begin exploring the platform.")
+st.info("🚀 Explore Customer Analytics, NLP, Forecasting, Reports and About using the sidebar.")

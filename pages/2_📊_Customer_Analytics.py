@@ -1,5 +1,14 @@
 import streamlit as st
 
+from customer_analytics.neural_nets import (
+    load_and_prepare_data,
+    preprocess_data,
+    build_mlp,
+    train_mlp,
+    evaluate_model,
+    save_model,
+)
+
 from core_pipeline.data_loader import load_online_retail
 from core_pipeline.helpers import dataset_summary
 
@@ -69,13 +78,15 @@ st.subheader("📈 Customer Statistics")
 
 left, right = st.columns(2)
 
+left, right = st.columns(2)
+
 with left:
-    st.info("Customer distribution")
+    st.bar_chart(df["Country"].value_counts().head(10))
 
 with right:
-    st.info("Sales statistics")
-
-st.empty()
+    st.bar_chart(
+        df.groupby("Country")["Quantity"].sum().sort_values(ascending=False).head(10)
+    )
 
 st.divider()
 
@@ -83,26 +94,155 @@ st.divider()
 # Neural Network
 # -------------------------------
 
-st.subheader("🧠 Neural Network Results")
+st.subheader("🧠 Neural Network")
 
-st.warning("Waiting for Member 1 integration.")
+cfg1, cfg2, cfg3 = st.columns(3)
 
-st.empty()
+with cfg1:
+    activation = st.selectbox(
+        "Activation",
+        ["relu", "sigmoid", "tanh"]
+    )
 
-st.divider()
+with cfg2:
+    optimizer = st.selectbox(
+        "Optimizer",
+        ["Adam", "SGD", "RMSprop"]
+    )
 
-# -------------------------------
-# Visualizations
-# -------------------------------
+with cfg3:
+    epochs = st.slider(
+        "Epochs",
+        min_value=5,
+        max_value=100,
+        value=20
+    )
 
-st.subheader("📊 Visualizations")
+train = st.button(
+    "🚀 Train Neural Network",
+    use_container_width=True
+)
 
-chart1, chart2 = st.columns(2)
+if train:
 
-with chart1:
-    st.empty()
+    # Load and preprocess data
+    customer_data, X, y = load_and_prepare_data(
+        "datasets/online_retail.csv"
+    )
 
-with chart2:
-    st.empty()
+    X_train, X_test, y_train, y_test, scaler = preprocess_data(
+        X,
+        y
+    )
 
-st.info("Graphs will be displayed here.")
+    st.success("Dataset prepared successfully!")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.metric("Customers", customer_data.shape[0])
+
+    with c2:
+        st.metric("Training Samples", X_train.shape[0])
+
+    with c3:
+        st.metric("Testing Samples", X_test.shape[0])
+
+    # Build model
+    model = build_mlp(
+        activation=activation,
+        optimizer_name=optimizer
+    )
+
+    # Train model
+    history = train_mlp(
+        model,
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        epochs=epochs
+    )
+
+    # Evaluate
+    accuracy, report, matrix, predictions = evaluate_model(
+        model,
+        X_test,
+        y_test
+    )
+
+    st.success("Model trained successfully!")
+
+    m1, m2 = st.columns(2)
+
+    with m1:
+        st.metric(
+            "Accuracy",
+            f"{accuracy:.2%}"
+        )
+
+    with m2:
+        st.metric(
+            "Epochs",
+            epochs
+        )
+
+    with st.expander("📄 Classification Report"):
+        st.code(report)
+
+    with st.expander("📊 Confusion Matrix"):
+        st.dataframe(matrix)
+
+    g1, g2 = st.columns(2)
+
+    with g1:
+        st.subheader("📈 Training Accuracy")
+        st.line_chart(history.history["accuracy"])
+
+        if "val_accuracy" in history.history:
+            st.subheader("📈 Validation Accuracy")
+            st.line_chart(history.history["val_accuracy"])
+
+    with g2:
+        st.subheader("📉 Training Loss")
+        st.line_chart(history.history["loss"])
+
+        if "val_loss" in history.history:
+            st.subheader("📉 Validation Loss")
+            st.line_chart(history.history["val_loss"])
+
+    st.divider()
+
+    # -------------------------------
+    # Visualizations
+    # -------------------------------
+
+    st.subheader("📊 Visualizations")
+
+    v1, v2 = st.columns(2)
+
+    with v1:
+        st.image(
+            "analytical_reports/model_comparison.png",
+            caption="Model Comparison",
+            use_container_width=True
+        )
+
+    with v2:
+        st.image(
+            "analytical_reports/loss_curve.png",
+            caption="Training Loss Curve",
+            use_container_width=True
+        )
+
+    st.divider()
+
+    # -------------------------------
+    # Export Model
+    # -------------------------------
+
+    st.subheader("💾 Export Model")
+
+    if st.button("💾 Save Model", use_container_width=True):
+        save_model(model)
+        st.success("Model saved successfully!")
