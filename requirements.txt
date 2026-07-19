@@ -14,3 +14,6 @@ umap-learn
 gensim
 spacy
 scipy
+statsmodels
+prophet
+openpyxl

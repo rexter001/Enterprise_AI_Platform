@@ -1,16 +1,26 @@
-@"
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 
-# Virtual environments
+# Virtual Environments
 venv/
 .venv/
+env/
 
 # Jupyter
 .ipynb_checkpoints/
 
-# OS files
+# Streamlit
+.streamlit/secrets.toml
+
+# OS Files
 .DS_Store
 Thumbs.db
-"@ | Out-File -Encoding utf8 .gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
