@@ -563,23 +563,8 @@ def evaluate_model(
 # 8. SAVE MODEL
 
 def save_model(model):
-
-
-    os.makedirs(
-
-        "models",
-
-        exist_ok=True
-
-    )
-
-
-    model.save(
-
-        "models/conversion_model.h5"
-
-    )
-
+    os.makedirs("serialized_weights", exist_ok=True)
+    model.save("serialized_weights/conversion_model.keras")
 
 
     print(
