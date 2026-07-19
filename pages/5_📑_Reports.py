@@ -1,86 +1,109 @@
 import streamlit as st
+import pandas as pd
 
-st.title("📑 Reports & Insights")
-st.caption("Performance Metrics • Model Comparison • Business Intelligence")
+st.set_page_config(page_title="Reports", page_icon="📑")
+
+st.title("📑 Reports & Business Insights")
+st.caption("Enterprise AI Platform • Consolidated Dashboard")
 
 st.divider()
 
-st.markdown("""
-This module consolidates the outputs from all AI models and presents
-business insights, evaluation metrics, and downloadable reports.
+# ============================
+# Executive Summary
+# ============================
+
+st.header("📊 Executive Summary")
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Modules", "4")
+col2.metric("Status", "Completed ✅")
+col3.metric("Forecast", "30 Days")
+col4.metric("Reports", "Ready")
+
+st.divider()
+
+# ============================
+# Module Summary
+# ============================
+
+st.header("📈 Module Performance")
+
+summary = pd.DataFrame(
+    {
+        "Module": [
+            "Customer Analytics",
+            "NLP Sentiment",
+            "Forecasting",
+            "Reports"
+        ],
+        "Status": [
+            "Completed",
+            "Completed",
+            "Completed",
+            "Ready"
+        ],
+        "Output": [
+            "Customer Segments",
+            "Sentiment Analysis",
+            "30-Day Forecast",
+            "Business Insights"
+        ]
+    }
+)
+
+st.dataframe(summary, use_container_width=True)
+
+st.divider()
+
+# ============================
+# Business Insights
+# ============================
+
+st.header("💡 Key Business Insights")
+
+st.success("""
+• Customer segmentation identifies high-value customers.
+
+• Sentiment analysis highlights customer satisfaction trends.
+
+• Forecasting predicts future sales demand.
+
+• Combined analytics enable better business decisions.
 """)
 
-# -----------------------------------
-# Dashboard Summary
-# -----------------------------------
+st.divider()
 
-col1, col2, col3 = st.columns(3)
+# ============================
+# Recommendations
+# ============================
 
-with col1:
-    st.metric("Models", "4")
+st.header("🎯 Recommendations")
 
-with col2:
-    st.metric("Reports", "--")
-
-with col3:
-    st.metric("Status", "Waiting")
+st.markdown("""
+- Improve customer retention using segmentation.
+- Monitor negative customer reviews regularly.
+- Plan inventory using forecasted demand.
+- Use AI insights for strategic decision making.
+""")
 
 st.divider()
 
-# -----------------------------------
-# Overall Performance
-# -----------------------------------
+# ============================
+# Export
+# ============================
 
-st.subheader("📊 Overall Performance")
-
-left, right = st.columns(2)
-
-with left:
-    st.info("Model Accuracy")
-
-with right:
-    st.info("Evaluation Metrics")
-
-st.empty()
-
-st.divider()
-
-# -----------------------------------
-# Model Comparison
-# -----------------------------------
-
-st.subheader("⚖️ Model Comparison")
-
-st.info("Comparison of all implemented machine learning models.")
-
-st.empty()
-
-st.divider()
-
-# -----------------------------------
-# Business Insights
-# -----------------------------------
-
-st.subheader("💡 Business Insights")
-
-st.warning("Insights will be generated after integrating all modules.")
-
-st.empty()
-
-st.divider()
-
-# -----------------------------------
-# Export Reports
-# -----------------------------------
-
-st.subheader("📥 Export Reports")
+st.header("📥 Export")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.button("📄 Download PDF Report", disabled=True)
+    st.download_button(
+        "📄 Download Report",
+        data=summary.to_csv(index=False),
+        file_name="enterprise_ai_report.csv",
+        mime="text/csv"
+    )
 
 with col2:
-    st.button("📊 Download CSV Results", disabled=True)
-
-st.info("Download options will be enabled after report generation.")
+    st.success("Report Ready")
