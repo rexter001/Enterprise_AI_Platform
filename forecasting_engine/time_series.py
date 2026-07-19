@@ -70,21 +70,13 @@ def create_daily_sales(df):
 
     daily_sales = (
 
-        df.groupby(df["InvoiceDate"].dt.date)["Amount"]
-
-        .sum()
-
-        .reset_index()
+    df.groupby(pd.Grouper(key="InvoiceDate", freq="D"))["Amount"]
+      .sum()
+      .reset_index()
 
     )
 
-    daily_sales.columns = [
-
-        "Date",
-
-        "Sales"
-
-    ]
+    daily_sales.columns = ["Date", "Sales"]
 
     daily_sales["Date"] = pd.to_datetime(
 
@@ -218,42 +210,35 @@ def rolling_statistics(daily_sales):
 
 def seasonality_analysis(daily_sales):
 
+    daily_sales = daily_sales.copy()
+
+    daily_sales["Date"] = pd.to_datetime(daily_sales["Date"])
+
+    # Group by year and month instead of using resample
     monthly = (
-
         daily_sales
-
-        .set_index("Date")
-
-        .resample("M")
-
+        .groupby(
+            daily_sales["Date"].dt.to_period("M")
+        )["Sales"]
         .sum()
-
+        .reset_index()
     )
 
-    plt.figure(figsize=(12,5))
+    # Convert Period -> Timestamp for plotting
+    monthly["Date"] = monthly["Date"].dt.to_timestamp()
 
-    plt.plot(
+    plt.figure(figsize=(12, 5))
 
-        monthly.index,
-
-        monthly["Sales"]
-
-    )
+    plt.plot(monthly["Date"], monthly["Sales"], marker="o")
 
     plt.title("Monthly Seasonality")
+    plt.xlabel("Month")
+    plt.ylabel("Sales")
 
     plt.tight_layout()
 
     plt.savefig(
-
-        os.path.join(
-
-            GRAPH_DIR,
-
-            "seasonality.png"
-
-        )
-
+        os.path.join(GRAPH_DIR, "seasonality.png")
     )
 
     plt.close()
@@ -265,23 +250,24 @@ def seasonality_analysis(daily_sales):
 
 def arima_forecast(daily_sales):
 
+    sales = daily_sales["Sales"]
+
+    train = sales[:-30]
+
+    test = sales[-30:]
+
     model = ARIMA(
-
-        daily_sales["Sales"],
-
+        train,
         order=(5,1,0)
-
     )
 
     model_fit = model.fit()
 
     forecast = model_fit.forecast(
-
         steps=30
-
     )
 
-    return forecast
+    return forecast, test
 
 
 # -----------------------------
@@ -314,61 +300,42 @@ def prophet_forecast(daily_sales):
 # Forecast Comparison
 # -----------------------------
 
-def compare_forecasts(daily_sales, arima_forecast_values):
+def compare_forecasts(actual, predictions):
 
-    actual = daily_sales["Sales"].tail(len(arima_forecast_values)).values
-
-    predictions = arima_forecast_values.values
-
-    mae = mean_absolute_error(
-        actual,
-        predictions
-    )
+    mae = mean_absolute_error(actual, predictions)
 
     rmse = np.sqrt(
-        mean_squared_error(
-            actual,
-            predictions
-        )
+        mean_squared_error(actual, predictions)
     )
 
-    mape = np.mean(
-        np.abs(
-            (actual - predictions) / actual
-        )
-    ) * 100
+    # Avoid division by zero
+    actual = np.array(actual)
+    predictions = np.array(predictions)
+
+    mask = actual != 0
+
+    mape = (
+        np.mean(
+            np.abs(
+                (actual[mask] - predictions[mask]) / actual[mask]
+            )
+        ) * 100
+    )
 
     metrics = pd.DataFrame({
-
-        "Metric": [
-            "MAE",
-            "RMSE",
-            "MAPE"
-        ],
-
-        "Value": [
-            mae,
-            rmse,
-            mape
-        ]
-
+        "Metric": ["MAE", "RMSE", "MAPE"],
+        "Value": [mae, rmse, mape]
     })
 
     metrics.to_csv(
-
         os.path.join(
-
             METRIC_DIR,
-
             "forecast_metrics.csv"
-
         ),
-
         index=False
-
     )
 
-    print(metrics)
+    return metrics
 
 
 # -----------------------------
@@ -526,7 +493,7 @@ def main():
 
     print("\nRunning ARIMA...")
 
-    arima_result = arima_forecast(daily_sales)
+    arima_result, test_data = arima_forecast(daily_sales)
 
     print("Running Prophet...")
 
@@ -534,7 +501,7 @@ def main():
 
     compare_forecasts(
 
-        daily_sales,
+        test_data,
 
         arima_result
 
