@@ -1,48 +1,63 @@
 # 🚀 Enterprise AI Platform
 
-An integrated AI-powered business intelligence platform built using **Streamlit**, **Machine Learning**, and **Natural Language Processing**.
+An integrated AI-powered Business Intelligence platform developed using **Streamlit**, **Machine Learning**, **Natural Language Processing**, and **Time Series Forecasting**.
 
-The platform combines multiple AI modules into a single dashboard for customer analytics, sentiment analysis, forecasting, and business reporting.
+The platform combines multiple AI modules into a unified dashboard for customer analytics, sentiment analysis, sales forecasting, and business reporting.
 
 ---
 
-## 📌 Features
+# 📌 Features
 
 - 📊 Customer Analytics
 - 💬 NLP & Sentiment Analysis
-- 📈 Time Series Forecasting
-- 📑 Business Reports & Insights
+- 📈 Time Series Forecasting (ARIMA & Prophet)
+- 📑 Reports & Business Insights
 - 📊 Interactive Streamlit Dashboard
 - 🤖 Machine Learning Integration
 
 ---
 
-## 🛠️ Technology Stack
+# 🛠 Technology Stack
 
+### Programming
 - Python
 - Streamlit
+
+### Data Processing
 - Pandas
 - NumPy
-- Scikit-learn
+- SciPy
+
+### Machine Learning
+- Scikit-Learn
 - TensorFlow
+- imbalanced-learn
+- Category Encoders
+
+### NLP
 - NLTK
 - spaCy
 - Gensim
 - WordCloud
-- joblib
+
+### Forecasting
+- Statsmodels (ARIMA)
+- Prophet
+
+### Visualization
 - Matplotlib
 - Plotly
-- scipy
 
 ---
 
-## 📂 Project Structure
+# 📂 Project Structure
 
-```
+```text
 Enterprise_AI_Platform/
-│── app.py
-│── requirements.txt
-│── README.md
+│
+├── app.py
+├── requirements.txt
+├── README.md
 │
 ├── pages/
 │   ├── 1_🏠_Home.py
@@ -52,26 +67,40 @@ Enterprise_AI_Platform/
 │   ├── 5_📑_Reports.py
 │   └── 6_ℹ️_About.py
 │
+├── core_pipeline/
 ├── customer_analytics/
 ├── natural_language/
 ├── forecasting_engine/
-├── core_pipeline/
 ├── datasets/
+├── outputs/
 ├── serialized_weights/
-├── analytical_reports/
-├── logs/
 └── static_assets/
 ```
 
 ---
 
-## 📊 Datasets
+# 📊 Datasets
 
-- Online Retail Dataset
-- Amazon Product Reviews Dataset (used for NLP preprocessing, sentiment analysis, and text mining)
+### Online Retail Dataset
+Used for:
+
+- Customer Analytics
+- Customer Segmentation
+- Time Series Forecasting
+- Business Intelligence
+
+### Amazon Reviews Dataset
+
+Used for:
+
+- Text Preprocessing
+- NLP
+- Sentiment Analysis
+- Word Frequency Analysis
+
 ---
 
-## ⚙️ Installation
+# ⚙️ Installation
 
 Clone the repository:
 
@@ -85,7 +114,7 @@ Move into the project directory:
 cd Enterprise_AI_Platform
 ```
 
-Install the required packages:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -93,13 +122,13 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Run the Application
+# ▶️ Run the Application
 
 ```bash
 streamlit run app.py
 ```
 
-If Streamlit is not recognized:
+or
 
 ```bash
 python -m streamlit run app.py
@@ -107,30 +136,40 @@ python -m streamlit run app.py
 
 ---
 
-## 👥 Team Responsibilities
+# 📷 Application Modules
 
-| Member | Responsibility |
-|---------|----------------|
-| Member 1 | Customer Analytics & Neural Networks |
-| Member 2 | NLP & Sentiment Analysis |
-| Member 3 | Time Series Forecasting |
-| Member 4 | Customer Segmentation & Feature Engineering |
+- 🏠 Home
+- 📊 Customer Analytics
+- 💬 NLP Sentiment Analysis
+- 📈 Forecasting
+- 📑 Reports
+- ℹ️ About
+
+---
+
+# 👥 Team Responsibilities
+
+| Role | Responsibility |
+|------|----------------|
+| AI/ML Engineer | Customer Analytics & Neural Networks |
+| NLP Engineer | Sentiment Analysis & Text Processing |
+| Forecasting Engineer | ARIMA & Prophet Forecasting |
+| Analytics Engineer | Feature Engineering & Customer Segmentation |
 | Team Lead | Dashboard Integration, Testing & Deployment |
 
 ---
 
-## 🚀 Future Enhancements
+# 🚀 Future Enhancements
 
 - Real-time analytics
 - Cloud deployment
 - User authentication
 - Automated report generation
 - AI-powered recommendations
+- REST API integration
 
 ---
 
-## 📄 License
+# 📄 License
 
-This project was developed as an academic AI/ML team project.
-
----
+Developed as an academic AI/ML internship project using Streamlit and Python.
