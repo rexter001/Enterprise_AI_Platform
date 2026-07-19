@@ -1,5 +1,14 @@
 import streamlit as st
 
+from natural_language.nlp_pipelines import (
+    build_nlp_features,
+    sentiment_analysis,
+    sentiment_distribution,
+    most_common_words,
+    tfidf_embeddings,
+    get_top_tfidf_features,
+)
+
 from core_pipeline.data_loader import load_amazon_reviews
 from core_pipeline.helpers import dataset_summary
 
@@ -69,13 +78,41 @@ st.divider()
 
 st.subheader("📝 Text Preprocessing")
 
-left, right = st.columns(2)
+with st.spinner("Running NLP preprocessing..."):
+    nlp_df = build_nlp_features(df)
 
-with left:
-    st.info("Cleaning & Tokenization")
+    st.write("Step 2: Preprocessing completed")
 
-with right:
-    st.info("Stopword Removal & Lemmatization")
+    st.success("NLP preprocessing completed successfully!")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.metric("Reviews", len(nlp_df))
+
+    with c2:
+        st.metric(
+            "Processed Reviews",
+            nlp_df["clean_review"].notna().sum()
+        )
+
+    with c3:
+        st.metric(
+            "Tokenized Reviews",
+            nlp_df["tokens"].notna().sum()
+        )
+
+    st.subheader("📄 Processed Reviews")
+
+    st.dataframe(
+        nlp_df[
+            [
+                "review_content",
+                "clean_review"
+            ]
+        ].head(10),
+        use_container_width=True
+    )
 
 st.divider()
 
@@ -85,22 +122,76 @@ st.divider()
 
 st.subheader("😊 Sentiment Analysis")
 
-st.warning("Waiting for Member 2 integration.")
+sentiment_df = sentiment_analysis(nlp_df)
+
+sentiment_counts = sentiment_distribution(sentiment_df)
+st.success("Sentiment analysis completed successfully!")
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+        st.metric(
+            "Positive",
+            sentiment_counts.get("Positive", 0)
+        )
+
+with c2:
+        st.metric(
+            "Neutral",
+            sentiment_counts.get("Neutral", 0)
+        )
+
+with c3:
+        st.metric(
+            "Negative",
+            sentiment_counts.get("Negative", 0)
+        )
+
+st.subheader("📄 Reviews with Sentiment")
+
+st.dataframe(
+        sentiment_df[
+            [
+                "review_content",
+                "rating",
+                "sentiment"
+            ]
+        ].head(10),
+        use_container_width=True
+    )
 
 st.divider()
 
-# -----------------------------------
+# -------------------------------
 # Visualizations
-# -----------------------------------
+# -------------------------------
 
 st.subheader("📊 Visualizations")
 
-chart1, chart2 = st.columns(2)
+v1, v2 = st.columns(2)
 
-with chart1:
-    st.empty()
+with v1:
+    st.image(
+        "analytical_reports/model_comparison.png",
+        caption="Model Comparison",
+        use_container_width=True
+    )
 
-with chart2:
-    st.empty()
+with v2:
+    st.image(
+        "analytical_reports/loss_curve.png",
+        caption="Training Loss Curve",
+        use_container_width=True
+    )
 
-st.info("Sentiment charts, word clouds, and graphs will appear here.")
+st.divider()
+
+# -------------------------------
+# Export Model
+# -------------------------------
+
+st.subheader("💾 Export Model")
+
+if st.button("💾 Save Model", use_container_width=True):
+    save_model(model)
+    st.success("Model saved successfully!")
