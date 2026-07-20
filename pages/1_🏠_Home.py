@@ -40,7 +40,7 @@ with c1:
     st.metric("Datasets", "2")
 
 with c2:
-    st.metric("Modules", "5")
+    st.metric("Modules", "6")
 
 with c3:
     st.metric("Project Status", "Completed")

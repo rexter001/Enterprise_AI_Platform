@@ -14,7 +14,7 @@ st.set_page_config(
 # Header
 # ----------------------------
 st.title("🤖 Enterprise AI Platform")
-st.caption("AI-Powered Business Intelligence Dashboard")
+st.caption("Unified Enterprise AI Business Intelligence & Analytics Platform")
 
 st.divider()
 
@@ -32,7 +32,7 @@ with col1:
     st.metric("Datasets", "2")
 
 with col2:
-    st.metric("Modules", "5")
+    st.metric("Modules", "6")
 
 with col3:
     st.metric("Status", "Ready")
@@ -51,4 +51,4 @@ st.markdown("""
 Use the sidebar to explore each module.
 """)
 
-st.info("Machine Learning models will appear inside their respective pages after integration.")
+st.info("✅ All AI modules have been successfully integrated. Use the sidebar to explore the platform.")

@@ -16,7 +16,7 @@ st.header("📊 Executive Summary")
 
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric("Modules", "4")
+col1.metric("Modules", "6")
 col2.metric("Status", "Completed ✅")
 col3.metric("Forecast", "30 Days")
 col4.metric("Reports", "Ready")
