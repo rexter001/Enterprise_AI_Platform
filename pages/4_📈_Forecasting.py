@@ -82,8 +82,6 @@ st.divider()
 # Time Series Analysis
 # -----------------------------------
 
-st.subheader("📊 Time Series Analysis")
-
 left, right = st.columns(2)
 
 st.subheader("📊 Time Series Analysis")
